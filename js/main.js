@@ -1,14 +1,13 @@
-// Mobile navigation toggle
 document.addEventListener('DOMContentLoaded', function () {
-  const navToggle = document.querySelector('.nav-toggle');
-  const navLinks = document.querySelector('.nav-links');
+  // --- Mobile Navigation Toggle ---
+  var navToggle = document.querySelector('.nav-toggle');
+  var navLinks = document.querySelector('.nav-links');
 
   if (navToggle && navLinks) {
     navToggle.addEventListener('click', function () {
       navLinks.classList.toggle('active');
     });
 
-    // Close menu when a link is clicked
     navLinks.querySelectorAll('a').forEach(function (link) {
       link.addEventListener('click', function () {
         navLinks.classList.remove('active');
@@ -16,23 +15,58 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  // Contact form handling (basic mailto fallback since GitHub Pages is static)
-  const contactForm = document.getElementById('contactForm');
+  // --- Navbar Scroll Effect ---
+  var navbar = document.querySelector('.navbar');
+  if (navbar) {
+    window.addEventListener('scroll', function () {
+      if (window.scrollY > 20) {
+        navbar.classList.add('scrolled');
+      } else {
+        navbar.classList.remove('scrolled');
+      }
+    });
+  }
+
+  // --- Scroll Reveal Animation ---
+  var fadeElements = document.querySelectorAll('.fade-up');
+
+  if (fadeElements.length > 0) {
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry, index) {
+        if (entry.isIntersecting) {
+          // Stagger animation for sibling elements
+          var siblings = entry.target.parentElement.querySelectorAll('.fade-up');
+          var siblingIndex = Array.prototype.indexOf.call(siblings, entry.target);
+          var delay = siblingIndex * 100;
+
+          setTimeout(function () {
+            entry.target.classList.add('visible');
+          }, delay);
+
+          observer.unobserve(entry.target);
+        }
+      });
+    }, {
+      threshold: 0.1,
+      rootMargin: '0px 0px -40px 0px'
+    });
+
+    fadeElements.forEach(function (el) {
+      observer.observe(el);
+    });
+  }
+
+  // --- Contact Form Handling ---
+  var contactForm = document.getElementById('contactForm');
   if (contactForm) {
     contactForm.addEventListener('submit', function (e) {
       e.preventDefault();
 
-      const name = document.getElementById('name').value;
-      const email = document.getElementById('email').value;
-      const phone = document.getElementById('phone').value;
-      const subject = document.getElementById('subject').value;
-      const message = document.getElementById('message').value;
-
-      const body = 'Name: ' + name + '%0D%0A' +
-                   'Email: ' + email + '%0D%0A' +
-                   'Phone: ' + (phone || 'N/A') + '%0D%0A' +
-                   'Subject: ' + subject + '%0D%0A%0D%0A' +
-                   'Message:%0D%0A' + message;
+      var name = document.getElementById('name').value;
+      var email = document.getElementById('email').value;
+      var phone = document.getElementById('phone').value;
+      var subject = document.getElementById('subject').value;
+      var message = document.getElementById('message').value;
 
       window.location.href = 'mailto:toother.dent@gmail.com?subject=' +
         encodeURIComponent('Website Enquiry: ' + subject) +

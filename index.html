@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Toother Dental Supplies - Quality dental products and supplies in Canberra, ACT. Trusted supplier for dental professionals across Australia.">
+  <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="images/favicon-16.png">
+  <link rel="apple-touch-icon" href="images/apple-touch-icon.png">
   <link rel="stylesheet" href="css/style.css">
   <title>Toother Dental Supplies | Quality Dental Products Australia</title>
 </head>
@@ -13,7 +16,7 @@
   <nav class="navbar">
     <div class="container nav-container">
       <a href="index.html" class="logo">
-        <span class="logo-icon">&#9789;</span> Toother<span class="logo-accent">Dental</span>
+        <img src="images/logo.png" alt="Toother Dental Supplies" class="logo-img">
       </a>
       <button class="nav-toggle" aria-label="Toggle navigation">
         <span></span><span></span><span></span>
@@ -29,10 +32,13 @@
 
   <!-- Hero Section -->
   <section class="hero">
-    <div class="hero-overlay"></div>
     <div class="container hero-content">
-      <h1>Your Trusted Partner in<br>Dental Supplies</h1>
-      <p>Providing quality dental products and equipment to professionals across Australia.</p>
+      <div class="hero-badge">
+        <span class="hero-badge-dot"></span>
+        TGA Registered Australian Supplier
+      </div>
+      <h1>Your Trusted Partner in<br><span class="highlight">Dental Supplies</span></h1>
+      <p>Providing quality dental products and equipment to professionals across Australia, backed by TGA registration and reliable service.</p>
       <div class="hero-buttons">
         <a href="products.html" class="btn btn-primary">Browse Products</a>
         <a href="contact.html" class="btn btn-secondary">Get in Touch</a>
@@ -40,27 +46,52 @@
     </div>
   </section>
 
+  <!-- Trust Bar -->
+  <section class="trust-bar">
+    <div class="container">
+      <div class="trust-bar-content">
+        <div class="trust-item">
+          <div class="trust-icon">&#10003;</div>
+          <span>TGA Registered Sponsor</span>
+        </div>
+        <div class="trust-item">
+          <div class="trust-icon">&#9733;</div>
+          <span>ABN Registered Business</span>
+        </div>
+        <div class="trust-item">
+          <div class="trust-icon">&#9992;</div>
+          <span>Australia-Wide Delivery</span>
+        </div>
+        <div class="trust-item">
+          <div class="trust-icon">&#9825;</div>
+          <span>Dedicated Support</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Features Section -->
   <section class="features">
     <div class="container">
-      <h2 class="section-title">Why Choose Toother?</h2>
+      <h2 class="section-title fade-up">Why Choose Toother?</h2>
+      <p class="section-subtitle fade-up">We combine quality products, fast delivery, and genuine care to support dental practices across Australia.</p>
       <div class="features-grid">
-        <div class="feature-card">
+        <div class="feature-card fade-up">
           <div class="feature-icon">&#9733;</div>
           <h3>Quality Products</h3>
           <p>We source only the highest quality dental supplies from trusted manufacturers, ensuring reliability for your practice.</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card fade-up">
           <div class="feature-icon">&#9201;</div>
           <h3>Fast Delivery</h3>
           <p>Efficient shipping across Australia so you never run out of essential supplies when you need them most.</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card fade-up">
           <div class="feature-icon">&#9825;</div>
           <h3>Customer Care</h3>
           <p>Dedicated support team ready to help you find exactly what your dental practice needs.</p>
         </div>
-        <div class="feature-card">
+        <div class="feature-card fade-up">
           <div class="feature-icon">&#10003;</div>
           <h3>TGA Registered</h3>
           <p>Fully registered with the Therapeutic Goods Administration as an authorised sponsor of dental products.</p>
@@ -72,24 +103,34 @@
   <!-- About Preview -->
   <section class="about-preview">
     <div class="container about-preview-content">
-      <div class="about-text">
-        <h2>About Toother Dental Supplies</h2>
+      <div class="about-text fade-up">
+        <div class="about-label">About Us</div>
+        <h2>Toother Dental Supplies</h2>
         <p>Based in Canberra, ACT, Toother Dental Supplies is a registered Australian business dedicated to providing dental professionals with the products and equipment they need to deliver excellent patient care.</p>
         <p>We are a TGA-registered sponsor committed to meeting the highest standards in dental supply distribution.</p>
         <a href="about.html" class="btn btn-outline">Learn More About Us</a>
       </div>
-      <div class="about-stats">
+      <div class="about-stats fade-up">
         <div class="stat">
-          <span class="stat-number">ABN Registered</span>
-          <span class="stat-label">Australian Business</span>
+          <div class="stat-icon">&#127919;</div>
+          <div>
+            <span class="stat-number">ABN Registered</span>
+            <span class="stat-label">Australian Business</span>
+          </div>
         </div>
         <div class="stat">
-          <span class="stat-number">TGA Sponsor</span>
-          <span class="stat-label">Therapeutic Goods</span>
+          <div class="stat-icon">&#9878;</div>
+          <div>
+            <span class="stat-number">TGA Sponsor</span>
+            <span class="stat-label">Therapeutic Goods</span>
+          </div>
         </div>
         <div class="stat">
-          <span class="stat-number">ACT Based</span>
-          <span class="stat-label">Canberra, Australia</span>
+          <div class="stat-icon">&#127758;</div>
+          <div>
+            <span class="stat-number">ACT Based</span>
+            <span class="stat-label">Canberra, Australia</span>
+          </div>
         </div>
       </div>
     </div>
@@ -97,10 +138,10 @@
 
   <!-- CTA Section -->
   <section class="cta">
-    <div class="container">
+    <div class="container fade-up">
       <h2>Ready to Order?</h2>
-      <p>Contact us today to discuss your dental supply needs.</p>
-      <a href="contact.html" class="btn btn-primary">Contact Us</a>
+      <p>Contact us today to discuss your dental supply needs and get a personalised quote.</p>
+      <a href="contact.html" class="btn btn-primary">Contact Us Today</a>
     </div>
   </section>
 
@@ -108,7 +149,7 @@
   <footer class="footer">
     <div class="container footer-content">
       <div class="footer-brand">
-        <h3><span class="logo-icon">&#9789;</span> Toother Dental Supplies</h3>
+        <img src="images/logo.png" alt="Toother Dental Supplies" class="footer-logo">
         <p>Quality dental products for professionals across Australia.</p>
       </div>
       <div class="footer-links">
@@ -124,8 +165,8 @@
         <h4>Contact</h4>
         <p>Chifley, ACT 2606</p>
         <p>Australia</p>
-        <p><a href="mailto:toother.dent@gmail.com">toother.dent@gmail.com</a></p>
-        <p><a href="tel:0426728313">0426 728 313</a></p>
+        <a href="mailto:toother.dent@gmail.com">toother.dent@gmail.com</a>
+        <a href="tel:0426728313">0426 728 313</a>
       </div>
     </div>
     <div class="footer-bottom">
