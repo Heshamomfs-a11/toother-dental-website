@@ -112,7 +112,7 @@ ul {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 72px;
+  height: 80px;
 }
 
 .logo {
@@ -121,9 +121,9 @@ ul {
 }
 
 .logo-img {
-  height: 48px;
+  height: 58px;
   width: auto;
-  max-height: 48px;
+  max-height: 58px;
   object-fit: contain;
   transition: var(--transition);
 }
