@@ -610,6 +610,94 @@ ul {
   font-size: 0.85rem;
 }
 
+/* --- Procedure Video Section --- */
+.procedure-video {
+  padding: 100px 0;
+  background: var(--white);
+  position: relative;
+  overflow: hidden;
+}
+
+.procedure-video::before {
+  content: '';
+  position: absolute;
+  right: -160px;
+  top: -160px;
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.procedure-video-content {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 72px;
+  align-items: center;
+  position: relative;
+}
+
+.procedure-video-text h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.4rem;
+  color: var(--dark);
+  line-height: 1.2;
+  margin-bottom: 20px;
+}
+
+.procedure-video-text p {
+  color: var(--text-light);
+  font-size: 1.05rem;
+  margin-bottom: 28px;
+}
+
+.procedure-steps {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 24px;
+  margin-bottom: 36px;
+}
+
+.procedure-steps li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text);
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.procedure-steps li span {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.procedure-video-player video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--dark);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg), var(--shadow-glow);
+  border: 1px solid var(--border);
+}
+
+.procedure-video-caption {
+  margin-top: 14px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
 /* --- CTA Section --- */
 .cta {
   background: var(--dark);
@@ -1100,6 +1188,15 @@ ul {
     gap: 48px;
   }
 
+  .procedure-video-content {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  .procedure-video-player {
+    order: -1;
+  }
+
   .about-stats {
     flex-direction: row;
   }
@@ -1180,6 +1277,18 @@ ul {
 
   .features {
     padding: 72px 0;
+  }
+
+  .procedure-video {
+    padding: 72px 0;
+  }
+
+  .procedure-video-text h2 {
+    font-size: 1.9rem;
+  }
+
+  .procedure-steps {
+    grid-template-columns: 1fr;
   }
 
   .features-grid {

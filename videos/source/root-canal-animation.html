@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Root Canal Treatment – animation source</title>
+<style>
+  html, body { margin: 0; background: #0a1628; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1280" height="720"></canvas>
+<script>
+/*
+  Toother Dental Supplies – "Root Canal Treatment, Step by Step"
+  Deterministic canvas animation. render(t) draws the frame at time t (seconds).
+  Rendered to MP4/WebM by videos/source/render.js (Playwright + ffmpeg).
+  Open this file in a browser to preview it in real time.
+*/
+var W = 1280, H = 720, DURATION = 46;
+var canvas = document.getElementById('c');
+var ctx = canvas.getContext('2d');
+
+var C = {
+  primary: '#0066cc', primaryDark: '#004d99', accent: '#00a8e8', dark: '#0a1628',
+  darkLight: '#1a2740', text: '#2d3748', textLight: '#64748b', light: '#f8fafc',
+  white: '#ffffff', border: '#e2e8f0',
+  enamel: '#f7f4ef', enamelShade: '#e4ded4', dentin: '#f0dfbe', dentinShade: '#d9c39a',
+  pulp: '#d9485c', pulpDark: '#7a1f2d', infected: '#5d1a24', gum: '#ec8e9b', gumDark: '#d9707f',
+  bone: '#f1e6d2', gp: '#e4866c', gpDark: '#c8644c', dam: '#2a7de1', steel: '#c9d1d9', steelDark: '#7d8794',
+  skin: '#f3c9a8', skinDark: '#e0ad88', scrubs: '#2f8fd6', scrubsDark: '#206ba6', chair: '#3b5b8c', chairDark: '#28415f'
+};
+
+var FONT = 'Inter, "Inter Display", "DejaVu Sans", Arial, sans-serif';
+
+var logo = new Image();
+logo.src = '../../images/logo.png';
+
+// --- helpers -----------------------------------------------------------------
+function clamp01(x) { return x < 0 ? 0 : x > 1 ? 1 : x; }
+function ease(x) { x = clamp01(x); return x * x * (3 - 2 * x); }
+function easeOut(x) { x = clamp01(x); return 1 - Math.pow(1 - x, 3); }
+function seg(t, a, b) { return ease((t - a) / (b - a)); }
+function lerp(a, b, x) { return a + (b - a) * x; }
+function rr(x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function circle(x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.closePath(); }
+function text(s, x, y, size, color, weight, align) {
+  ctx.font = (weight || 600) + ' ' + size + 'px ' + FONT;
+  ctx.fillStyle = color; ctx.textAlign = align || 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(s, x, y);
+}
+function wrapText(s, x, y, maxW, lineH, size, color, weight, align) {
+  ctx.font = (weight || 400) + ' ' + size + 'px ' + FONT;
+  var words = s.split(' '), line = '', lines = [];
+  for (var i = 0; i < words.length; i++) {
+    var test = line ? line + ' ' + words[i] : words[i];
+    if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = words[i]; } else line = test;
+  }
+  if (line) lines.push(line);
+  for (var j = 0; j < lines.length; j++) text(lines[j], x, y + j * lineH, size, color, weight, align);
+  return lines.length;
+}
+
+// --- backgrounds ---------------------------------------------------------------
+function softBackground() {
+  var g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, '#eef6fd'); g.addColorStop(1, '#f8fafc');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = 0.5;
+  var r1 = ctx.createRadialGradient(1050, 120, 0, 1050, 120, 420);
+  r1.addColorStop(0, 'rgba(0,168,232,0.25)'); r1.addColorStop(1, 'rgba(0,168,232,0)');
+  ctx.fillStyle = r1; ctx.fillRect(0, 0, W, H);
+  var r2 = ctx.createRadialGradient(200, 650, 0, 200, 650, 420);
+  r2.addColorStop(0, 'rgba(0,102,204,0.18)'); r2.addColorStop(1, 'rgba(0,102,204,0)');
+  ctx.fillStyle = r2; ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = 1;
+}
+function darkBackground() {
+  var g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, '#0a1628'); g.addColorStop(1, '#14305a');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  var r1 = ctx.createRadialGradient(1000, 200, 0, 1000, 200, 600);
+  r1.addColorStop(0, 'rgba(0,168,232,0.28)'); r1.addColorStop(1, 'rgba(0,168,232,0)');
+  ctx.fillStyle = r1; ctx.fillRect(0, 0, W, H);
+}
+
+function brandMark(x, y, h, dark) {
+  // Toother logo (image) with text fallback.
+  if (logo.complete && logo.naturalWidth) {
+    var w = h * logo.naturalWidth / logo.naturalHeight;
+    if (dark) {
+      rr(x + h * 0.12, y + h * 0.16, w - h * 0.24, h * 0.68, h * 0.14);
+      ctx.fillStyle = 'rgba(255,255,255,0.96)'; ctx.fill();
+    }
+    ctx.drawImage(logo, x, y, w, h);
+  } else {
+    text('Toother Dental Supplies', x, y + h / 2, h * 0.5, dark ? C.white : C.primary, 800);
+  }
+}
+
+// --- the tooth ---------------------------------------------------------------
+// Local coordinates: origin at the cervical line (gum level), y grows downwards.
+function toothOutline() {
+  ctx.beginPath();
+  ctx.moveTo(-66, 0);
+  ctx.bezierCurveTo(-74, -40, -72, -80, -48, -112);        // left crown wall
+  ctx.bezierCurveTo(-34, -126, -22, -96, -12, -100);       // left cusp
+  ctx.bezierCurveTo(-4, -104, 4, -104, 12, -100);          // central fissure
+  ctx.bezierCurveTo(22, -96, 34, -126, 48, -112);          // right cusp
+  ctx.bezierCurveTo(72, -80, 74, -40, 66, 0);              // right crown wall
+  ctx.bezierCurveTo(70, 50, 62, 110, 46, 156);             // right root outer
+  ctx.bezierCurveTo(40, 166, 30, 160, 28, 146);            // right apex
+  ctx.bezierCurveTo(24, 100, 16, 60, 8, 26);               // right root inner
+  ctx.bezierCurveTo(4, 14, -4, 14, -8, 26);                // furcation
+  ctx.bezierCurveTo(-16, 60, -24, 100, -28, 146);          // left root inner
+  ctx.bezierCurveTo(-30, 160, -40, 166, -46, 156);         // left apex
+  ctx.bezierCurveTo(-62, 110, -70, 50, -66, 0);            // left root outer
+  ctx.closePath();
+}
+function pulpChamberPath() {
+  var p = new Path2D();
+  p.moveTo(-28, -10);
+  p.bezierCurveTo(-34, -40, -36, -60, -26, -78);         // left wall + horn
+  p.bezierCurveTo(-20, -86, -14, -66, -4, -62);
+  p.bezierCurveTo(0, -60, 0, -60, 4, -62);
+  p.bezierCurveTo(14, -66, 20, -86, 26, -78);            // right horn
+  p.bezierCurveTo(36, -60, 34, -40, 28, -10);
+  p.bezierCurveTo(26, 0, 20, 4, 14, 0);                  // floor toward right canal
+  p.bezierCurveTo(6, -6, -6, -6, -14, 0);
+  p.bezierCurveTo(-20, 4, -26, 0, -28, -10);
+  p.closePath();
+  return p;
+}
+function canalPath(side) {
+  // side = -1 (left) or 1 (right). Tapered canal from chamber floor to apex.
+  var s = side, p = new Path2D();
+  p.moveTo(s * 17, -2);
+  p.bezierCurveTo(s * 25, 40, s * 32, 90, s * 37, 142);
+  p.bezierCurveTo(s * 38, 149, s * 31, 149, s * 31, 142);
+  p.bezierCurveTo(s * 25, 90, s * 16, 40, s * 5, -2);
+  p.closePath();
+  return p;
+}
+function pulpSpacePath() {
+  // chamber + both canals as one path (for clipping fills)
+  var p = new Path2D();
+  p.addPath(pulpChamberPath()); p.addPath(canalPath(-1)); p.addPath(canalPath(1));
+  return p;
+}
+function canalCenter(side, u) {
+  // Point at parameter u (0 = chamber floor, 1 = apex) along the canal centre line.
+  var s = side;
+  var p0 = { x: s * 11, y: -2 }, p1 = { x: s * 20.5, y: 40 }, p2 = { x: s * 28.5, y: 90 }, p3 = { x: s * 34, y: 142 };
+  var mt = 1 - u;
+  return {
+    x: mt * mt * mt * p0.x + 3 * mt * mt * u * p1.x + 3 * mt * u * u * p2.x + u * u * u * p3.x,
+    y: mt * mt * mt * p0.y + 3 * mt * mt * u * p1.y + 3 * mt * u * u * p2.y + u * u * u * p3.y
+  };
+}
+function accessCavityPath(depth) {
+  // Cavity drilled from the occlusal surface into the pulp chamber. depth 0..1
+  var bottom = lerp(-100, -56, depth);
+  var w = lerp(6, 22, depth);
+  var p = new Path2D();
+  p.moveTo(-w, -104);
+  p.quadraticCurveTo(-w - 2, bottom, 0, bottom + 4);
+  p.quadraticCurveTo(w + 2, bottom, w, -104);
+  p.closePath();
+  return p;
+}
+
+/*
+  state = {
+    infection: 0..1  (1 = inflamed dark pulp + apical abscess)
+    pulp: 0..1       (1 = pulp tissue present; 0 = removed/clean)
+    access: 0..1     (access cavity depth)
+    fill: 0..1       (gutta-percha level from apex up)
+    restore: 0..1    (core filling in the access cavity)
+    crown: 0..1      (final crown sliding on)
+    dam: 0..1        (rubber dam opacity)
+    gumDip: pixels of anaesthetic swelling (unused visual)
+  }
+*/
+function drawToothScene(cx, cy, scale, st, t) {
+  ctx.save();
+  ctx.translate(cx, cy); ctx.scale(scale, scale);
+
+  // Bone and gum behind the tooth
+  ctx.fillStyle = C.bone;
+  ctx.beginPath(); ctx.rect(-260, 24, 520, 200); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.04)';
+  for (var i = 0; i < 14; i++) { circle(-240 + i * 38 + (i % 2) * 10, 60 + (i % 3) * 45, 9); ctx.fill(); }
+
+  var gumY = 0;
+  ctx.fillStyle = C.gum;
+  ctx.beginPath();
+  ctx.moveTo(-260, gumY + 8);
+  ctx.bezierCurveTo(-200, gumY - 14, -120, gumY - 10, -70, gumY + 2);
+  ctx.bezierCurveTo(-30, gumY + 10, 30, gumY + 10, 70, gumY + 2);
+  ctx.bezierCurveTo(120, gumY - 10, 200, gumY - 14, 260, gumY + 8);
+  ctx.lineTo(260, 40); ctx.lineTo(-260, 40); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = C.gumDark;
+  ctx.beginPath();
+  ctx.moveTo(-260, 28); ctx.bezierCurveTo(-120, 16, 120, 16, 260, 28);
+  ctx.lineTo(260, 40); ctx.lineTo(-260, 40); ctx.closePath(); ctx.fill();
+
+  // Neighbouring teeth (ghosted)
+  ctx.save(); ctx.globalAlpha = 0.35;
+  ctx.translate(-175, 6); ctx.scale(0.92, 0.92); toothOutline(); ctx.fillStyle = C.enamelShade; ctx.fill();
+  ctx.restore();
+  ctx.save(); ctx.globalAlpha = 0.35;
+  ctx.translate(175, 6); ctx.scale(0.92, 0.92); toothOutline(); ctx.fillStyle = C.enamelShade; ctx.fill();
+  ctx.restore();
+
+  // Apical abscess (infection)
+  if (st.infection > 0) {
+    ctx.save(); ctx.globalAlpha = st.infection;
+    var pulse = 1 + 0.08 * Math.sin(t * 5);
+    var g = ctx.createRadialGradient(34, 150, 2, 34, 150, 32 * pulse);
+    g.addColorStop(0, 'rgba(150,30,50,0.85)'); g.addColorStop(0.6, 'rgba(190,60,80,0.45)'); g.addColorStop(1, 'rgba(220,90,110,0)');
+    ctx.fillStyle = g; circle(34, 150, 34 * pulse); ctx.fill();
+    ctx.restore();
+  }
+
+  // Tooth body: dentin
+  toothOutline(); ctx.fillStyle = C.dentin; ctx.fill();
+  ctx.save(); toothOutline(); ctx.clip();
+  // dentin shading on the right side
+  var dg = ctx.createLinearGradient(-70, 0, 70, 0);
+  dg.addColorStop(0, 'rgba(0,0,0,0)'); dg.addColorStop(1, 'rgba(120,80,30,0.16)');
+  ctx.fillStyle = dg; ctx.fillRect(-80, -130, 160, 300);
+  // enamel cap
+  ctx.fillStyle = C.enamel;
+  ctx.beginPath();
+  ctx.moveTo(-90, -130); ctx.lineTo(90, -130); ctx.lineTo(80, -20);
+  ctx.bezierCurveTo(40, -36, -40, -36, -80, -20); ctx.closePath(); ctx.fill();
+  var eg = ctx.createLinearGradient(-70, 0, 70, 0);
+  eg.addColorStop(0, 'rgba(0,0,0,0)'); eg.addColorStop(1, 'rgba(60,60,80,0.10)');
+  ctx.fillStyle = eg; ctx.fillRect(-90, -130, 180, 110);
+  ctx.restore();
+
+  // Pulp chamber & canals
+  var pulpCol = st.infection > 0.5 ? C.infected : C.pulp;
+  ctx.save(); toothOutline(); ctx.clip();
+  var pulpSpace = pulpSpacePath();
+  // empty canal interior (dark hollow) when the pulp is removed
+  ctx.fillStyle = '#4a3838'; ctx.fill(pulpSpace);
+  // pulp tissue
+  if (st.pulp > 0) {
+    ctx.save(); ctx.globalAlpha = st.pulp;
+    ctx.fillStyle = pulpCol; ctx.fill(pulpSpace);
+    if (st.infection > 0) {
+      ctx.globalAlpha = st.pulp * st.infection;
+      ctx.fillStyle = 'rgba(40,5,12,0.6)';
+      circle(-8, -50, 7); ctx.fill(); circle(12, -34, 6); ctx.fill(); circle(0, -70, 5); ctx.fill();
+      circle(-24, 70, 4); ctx.fill(); circle(28, 100, 4); ctx.fill();
+    }
+    ctx.restore();
+  }
+  // gutta-percha fill (from apex upwards)
+  if (st.fill > 0) {
+    ctx.save(); ctx.clip(pulpSpace);
+    var top = lerp(150, -14, st.fill);
+    var fg = ctx.createLinearGradient(-40, 0, 40, 0);
+    fg.addColorStop(0, C.gp); fg.addColorStop(1, C.gpDark);
+    ctx.fillStyle = fg; ctx.fillRect(-60, top, 120, 170 - top);
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // Access cavity
+  if (st.access > 0) {
+    ctx.fillStyle = st.pulp > 0.5 ? C.pulpDark : '#4a3838'; ctx.fill(accessCavityPath(st.access));
+  }
+  // Core restoration filling the pulp chamber and the access cavity
+  if (st.restore > 0) {
+    ctx.save();
+    var core = new Path2D(); core.addPath(accessCavityPath(Math.max(st.access, 0.01))); core.addPath(pulpChamberPath());
+    ctx.clip(core);
+    ctx.fillStyle = '#eef0f2';
+    var coreTop = lerp(-10, -112, st.restore);
+    ctx.fillRect(-50, coreTop, 100, 0 - coreTop);
+    ctx.restore();
+  }
+
+  // Tooth outline stroke
+  toothOutline(); ctx.lineWidth = 2.2; ctx.strokeStyle = 'rgba(80,60,40,0.55)'; ctx.stroke();
+
+  // Crown restoration sliding on
+  if (st.crown > 0) {
+    ctx.save();
+    ctx.translate(0, lerp(-90, 0, easeOut(st.crown)));
+    ctx.globalAlpha = Math.min(1, st.crown * 1.4);
+    ctx.beginPath();
+    ctx.moveTo(-68, -4);
+    ctx.bezierCurveTo(-76, -44, -74, -84, -50, -116);
+    ctx.bezierCurveTo(-36, -130, -22, -100, -12, -104);
+    ctx.bezierCurveTo(-4, -108, 4, -108, 12, -104);
+    ctx.bezierCurveTo(22, -100, 36, -130, 50, -116);
+    ctx.bezierCurveTo(74, -84, 76, -44, 68, -4);
+    ctx.closePath();
+    var cg = ctx.createLinearGradient(-70, -120, 70, 0);
+    cg.addColorStop(0, '#ffffff'); cg.addColorStop(1, '#dfe7ee');
+    ctx.fillStyle = cg; ctx.fill();
+    ctx.lineWidth = 2.2; ctx.strokeStyle = 'rgba(70,90,110,0.7)'; ctx.stroke();
+    // highlight
+    ctx.globalAlpha *= 0.7; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-50, -70); ctx.bezierCurveTo(-52, -95, -40, -108, -28, -112); ctx.stroke();
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+function drawRubberDam(cx, cy, scale, alpha) {
+  if (alpha <= 0) return;
+  ctx.save(); ctx.globalAlpha = alpha;
+  ctx.translate(cx, cy); ctx.scale(scale, scale);
+  function sheet() {
+    rr(-300, -150, 600, 164, 22);
+    ctx.moveTo(96, -56); ctx.ellipse(0, -56, 96, 78, 0, 0, Math.PI * 2, true);
+  }
+  ctx.shadowColor = 'rgba(10,22,40,0.25)'; ctx.shadowBlur = 24; ctx.shadowOffsetY = 6;
+  sheet(); ctx.fillStyle = C.dam; ctx.fill('evenodd');
+  ctx.shadowColor = 'transparent';
+  // soft sheen
+  var g = ctx.createLinearGradient(-300, -150, 300, 20);
+  g.addColorStop(0, 'rgba(255,255,255,0.22)'); g.addColorStop(1, 'rgba(0,0,0,0.12)');
+  sheet(); ctx.fillStyle = g; ctx.fill('evenodd');
+  // clamp around the neck of the tooth
+  ctx.lineWidth = 7; ctx.strokeStyle = C.steelDark;
+  ctx.beginPath(); ctx.ellipse(0, -6, 80, 26, 0, Math.PI * 0.08, Math.PI * 0.92); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(0, -6, 80, 26, 0, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke();
+  ctx.lineWidth = 3; ctx.strokeStyle = C.steel;
+  ctx.beginPath(); ctx.ellipse(0, -6, 80, 26, 0, Math.PI * 0.1, Math.PI * 0.9); ctx.stroke();
+  ctx.restore();
+}
+
+// --- instruments -------------------------------------------------------------
+function drawSyringe(cx, cy, scale, progress, t) {
+  // progress 0: off-screen; 1: needle tip at the gum beside the tooth
+  var x0 = -520, y0 = -300, x1 = -92, y1 = -6;
+  var x = lerp(x0, x1, easeOut(progress)), y = lerp(y0, y1, easeOut(progress));
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(scale, scale);
+  ctx.translate(x, y); ctx.rotate(-Math.PI / 4.6);
+  // needle
+  ctx.strokeStyle = C.steelDark; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-54, 0); ctx.stroke();
+  // hub
+  ctx.fillStyle = C.steel; rr(-66, -5, 14, 10, 2); ctx.fill();
+  // barrel (dental cartridge syringe)
+  ctx.fillStyle = '#dfe6ec'; rr(-250, -11, 186, 22, 6); ctx.fill();
+  ctx.strokeStyle = C.steelDark; ctx.lineWidth = 1.5; rr(-250, -11, 186, 22, 6); ctx.stroke();
+  ctx.fillStyle = 'rgba(0,168,232,0.25)'; rr(-238, -7, 140, 14, 3); ctx.fill();
+  // finger grip + thumb ring
+  ctx.fillStyle = C.steelDark; rr(-266, -30, 12, 60, 4); ctx.fill();
+  ctx.lineWidth = 9; ctx.strokeStyle = C.steelDark; circle(-312, 0, 24); ctx.stroke();
+  ctx.lineWidth = 7; ctx.strokeStyle = C.steel; circle(-312, 0, 24); ctx.stroke();
+  ctx.restore();
+  // numbing ripples
+  if (progress >= 1) {
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(scale, scale);
+    for (var i = 0; i < 3; i++) {
+      var ph = ((t * 0.9 + i / 3) % 1);
+      ctx.globalAlpha = (1 - ph) * 0.7; ctx.lineWidth = 3; ctx.strokeStyle = C.accent;
+      circle(x1 - 2, y1 + 6, 10 + ph * 46); ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+function drawHandpiece(cx, cy, scale, depth, running, t) {
+  // High-speed handpiece coming from the upper right, bur tip at the access cavity
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(scale, scale);
+  var tipY = lerp(-150, lerp(-104, -58, depth), 1);
+  var jitter = running ? Math.sin(t * 90) * 0.8 : 0;
+  ctx.translate(jitter, tipY);
+  // bur
+  ctx.strokeStyle = C.steelDark; ctx.lineWidth = 5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -40); ctx.stroke();
+  ctx.fillStyle = C.steel; circle(0, -2, 4.5); ctx.fill();
+  // head
+  ctx.fillStyle = '#e9eef3'; circle(0, -54, 17); ctx.fill();
+  ctx.strokeStyle = C.steelDark; ctx.lineWidth = 2; circle(0, -54, 17); ctx.stroke();
+  // body angled up and right
+  ctx.save(); ctx.translate(12, -62); ctx.rotate(-Math.PI / 3.6);
+  var bg = ctx.createLinearGradient(0, -14, 0, 14);
+  bg.addColorStop(0, '#f6f8fa'); bg.addColorStop(1, '#b9c2cc');
+  ctx.fillStyle = bg; rr(0, -14, 230, 28, 12); ctx.fill();
+  ctx.strokeStyle = C.steelDark; ctx.lineWidth = 2; rr(0, -14, 230, 28, 12); ctx.stroke();
+  ctx.fillStyle = C.primary; rr(70, -14, 10, 28, 2); ctx.fill();
+  ctx.restore();
+  // water spray
+  if (running) {
+    ctx.fillStyle = 'rgba(0,168,232,0.55)';
+    for (var i = 0; i < 7; i++) {
+      var ph = ((t * 2.2 + i * 0.143) % 1);
+      var ang = -Math.PI / 2 + (i - 3) * 0.33;
+      circle(Math.cos(ang) * ph * 48, -2 + Math.sin(ang) * ph * 30 + ph * ph * 26, 3 * (1 - ph) + 1); ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+function drawEndoFile(cx, cy, scale, side, depth, t) {
+  // Endodontic file following the canal centre-line. depth 0..1 along the canal.
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(scale, scale);
+  var pts = [{ x: side * 2, y: -140 }, { x: side * 6, y: -70 }];
+  var n = 24, u;
+  for (var i = 0; i <= n; i++) { u = (i / n) * depth; if (u <= 0) continue; pts.push(canalCenter(side, u)); }
+  ctx.strokeStyle = C.steel; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+  for (var j = 1; j < pts.length; j++) ctx.lineTo(pts[j].x, pts[j].y);
+  ctx.stroke();
+  ctx.strokeStyle = C.steelDark; ctx.lineWidth = 1.2; ctx.stroke();
+  // handle
+  ctx.fillStyle = side < 0 ? '#f2c230' : '#e03b3b';
+  rr(side * 2 - 9, -176, 18, 40, 5); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 1.2; rr(side * 2 - 9, -176, 18, 40, 5); ctx.stroke();
+  // rubber stop
+  ctx.fillStyle = '#333'; rr(side * 2 - 6, -118, 12, 6, 2); ctx.fill();
+  ctx.restore();
+}
+
+function drawIrrigation(cx, cy, scale, t) {
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(scale, scale);
+  // irrigation needle from upper left
+  ctx.save(); ctx.translate(-10, -112); ctx.rotate(-Math.PI / 5);
+  ctx.strokeStyle = C.steelDark; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-70, 0); ctx.stroke();
+  ctx.fillStyle = '#dfe6ec'; rr(-250, -9, 180, 18, 6); ctx.fill();
+  ctx.strokeStyle = C.steelDark; ctx.lineWidth = 1.5; rr(-250, -9, 180, 18, 6); ctx.stroke();
+  ctx.fillStyle = 'rgba(0,168,232,0.35)'; rr(-240, -5, 130, 10, 3); ctx.fill();
+  ctx.restore();
+  // droplets into the access cavity
+  ctx.fillStyle = 'rgba(0,168,232,0.8)';
+  for (var i = 0; i < 6; i++) {
+    var ph = ((t * 1.6 + i / 6) % 1);
+    circle(-6 + i % 2 * 6, -108 + ph * 46, 3.2 - ph * 1.5); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawPlugger(cx, cy, scale, t) {
+  ctx.save(); ctx.translate(cx, cy); ctx.scale(scale, scale);
+  var bob = Math.sin(t * 4) * 6;
+  ctx.translate(0, -62 + bob);
+  ctx.strokeStyle = C.steelDark; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -60); ctx.stroke();
+  ctx.save(); ctx.translate(0, -60); ctx.rotate(-Math.PI / 3.4);
+  ctx.fillStyle = '#e9eef3'; rr(0, -8, 200, 16, 8); ctx.fill();
+  ctx.strokeStyle = C.steelDark; ctx.lineWidth = 1.5; rr(0, -8, 200, 16, 8); ctx.stroke();
+  ctx.restore();
+  ctx.restore();
+}
+
+// --- operatory scene (dentist + patient) ---------------------------------------
+function drawOperatory(t, zoom) {
+  // zoom: 0 = whole room; 1 = tight on patient's mouth
+  var fx = 712, fy = 410; // focus point (patient's mouth)
+  var s = lerp(1, 3.2, ease(zoom));
+  ctx.save();
+  ctx.translate(fx, fy); ctx.scale(s, s); ctx.translate(-fx, -fy);
+
+  // room
+  var wall = ctx.createLinearGradient(0, 0, 0, H);
+  wall.addColorStop(0, '#e9f3fb'); wall.addColorStop(1, '#d3e4f2');
+  ctx.fillStyle = wall; ctx.fillRect(-W, -H, 3 * W, 3 * H);
+  ctx.fillStyle = '#c7d8e6'; ctx.fillRect(-W, 540, 3 * W, 3 * H); // floor
+  // window
+  rr(90, 90, 300, 220, 14); ctx.fillStyle = '#bfe1f7'; ctx.fill();
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 10; rr(90, 90, 300, 220, 14); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(240, 90); ctx.lineTo(240, 310); ctx.moveTo(90, 200); ctx.lineTo(390, 200); ctx.stroke();
+  // cabinet
+  rr(60, 380, 330, 160, 10); ctx.fillStyle = '#ffffff'; ctx.fill();
+  ctx.fillStyle = '#e2e8f0'; ctx.fillRect(60, 420, 330, 3);
+  ctx.fillStyle = C.primary; rr(110, 440, 36, 6, 3); ctx.fill(); rr(260, 440, 36, 6, 3); ctx.fill();
+  // tray with instruments on the cabinet
+  rr(120, 362, 200, 22, 6); ctx.fillStyle = '#dfe6ec'; ctx.fill();
+  ctx.strokeStyle = C.steelDark; ctx.lineWidth = 3;
+  for (var i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(140 + i * 42, 366); ctx.lineTo(160 + i * 42, 380); ctx.stroke(); }
+
+  // overhead light arm + lamp
+  ctx.strokeStyle = '#9fb0c2'; ctx.lineWidth = 12; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(980, 0); ctx.lineTo(980, 140); ctx.lineTo(830, 250); ctx.stroke();
+  ctx.save(); ctx.translate(800, 262); ctx.rotate(0.6);
+  rr(-70, -28, 140, 56, 20); ctx.fillStyle = '#f5f7fa'; ctx.fill();
+  ctx.strokeStyle = '#9fb0c2'; ctx.lineWidth = 4; rr(-70, -28, 140, 56, 20); ctx.stroke();
+  rr(-58, -16, 116, 32, 12); ctx.fillStyle = '#fff7d6'; ctx.fill();
+  ctx.restore();
+  var lg = ctx.createRadialGradient(770, 300, 10, 720, 400, 260);
+  lg.addColorStop(0, 'rgba(255,248,210,0.45)'); lg.addColorStop(1, 'rgba(255,248,210,0)');
+  ctx.fillStyle = lg; ctx.beginPath(); ctx.moveTo(760, 280); ctx.lineTo(560, 520); ctx.lineTo(940, 520); ctx.closePath(); ctx.fill();
+
+  // dental chair (reclined), patient lies head to the right
+  ctx.fillStyle = C.chairDark; rr(560, 560, 120, 50, 10); ctx.fill(); // base
+  rr(600, 480, 50, 90, 8); ctx.fill();                                  // column
+  ctx.fillStyle = C.chair;
+  ctx.beginPath();
+  ctx.moveTo(330, 470); ctx.lineTo(620, 440); ctx.quadraticCurveTo(800, 420, 840, 430);
+  ctx.quadraticCurveTo(880, 440, 860, 480); ctx.lineTo(620, 500); ctx.lineTo(330, 540);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = C.chairDark;
+  ctx.beginPath(); ctx.moveTo(300, 480); ctx.lineTo(360, 470); ctx.lineTo(360, 540); ctx.lineTo(300, 560); ctx.closePath(); ctx.fill(); // foot rest
+  // headrest
+  rr(790, 402, 80, 46, 18); ctx.fillStyle = C.chairDark; ctx.fill();
+
+  // patient body (bib + gown)
+  ctx.fillStyle = '#bfe3f6';
+  ctx.beginPath(); ctx.moveTo(380, 470); ctx.quadraticCurveTo(560, 430, 650, 450);
+  ctx.quadraticCurveTo(700, 456, 700, 480); ctx.lineTo(650, 492); ctx.lineTo(380, 520); ctx.closePath(); ctx.fill();
+  // patient legs under blanket shade
+  ctx.fillStyle = '#a8d3ea'; ctx.beginPath(); ctx.moveTo(380, 470); ctx.lineTo(470, 455); ctx.lineTo(470, 505); ctx.lineTo(380, 520); ctx.closePath(); ctx.fill();
+  // patient bib
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(610, 446); ctx.lineTo(690, 440); ctx.lineTo(700, 476); ctx.lineTo(620, 486); ctx.closePath(); ctx.fill();
+  // patient head (lying back, facing up)
+  ctx.fillStyle = C.skin;
+  ctx.beginPath(); ctx.ellipse(742, 412, 54, 44, -0.25, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#5b3a2b'; // hair toward the headrest
+  ctx.beginPath(); ctx.ellipse(778, 396, 44, 42, -0.3, Math.PI * 1.1, Math.PI * 2.1); ctx.fill();
+  // closed eye and nose
+  ctx.strokeStyle = '#8b5e4b'; ctx.lineWidth = 2.5; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(750, 386); ctx.quadraticCurveTo(742, 381, 734, 387); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(724, 394); ctx.quadraticCurveTo(716, 400, 726, 405); ctx.stroke();
+  // open mouth (focus point)
+  ctx.fillStyle = '#7a2a35'; ctx.beginPath(); ctx.ellipse(fx, fy, 13, 9, -0.3, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(fx - 9, fy - 8, 18, 4);
+
+  // dentist (seated behind the patient's head, leaning over), facing left
+  var breathe = Math.sin(t * 1.6) * 2;
+  // stool
+  ctx.fillStyle = '#9fb0c2'; rr(960, 520, 100, 16, 8); ctx.fill(); rr(1002, 536, 16, 60, 4); ctx.fill();
+  // body
+  ctx.save(); ctx.translate(0, breathe);
+  ctx.fillStyle = C.scrubs;
+  ctx.beginPath(); ctx.moveTo(900, 320); ctx.quadraticCurveTo(1040, 270, 1080, 340);
+  ctx.lineTo(1080, 540); ctx.lineTo(930, 540); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = C.scrubsDark; ctx.beginPath(); ctx.moveTo(960, 300); ctx.lineTo(1000, 320); ctx.lineTo(980, 360); ctx.closePath(); ctx.fill(); // v-neck
+  // arms reaching toward the patient's mouth
+  ctx.strokeStyle = C.scrubs; ctx.lineWidth = 34; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(930, 340); ctx.quadraticCurveTo(860, 340, 780, 362); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(1050, 360); ctx.quadraticCurveTo(900, 430, 702, 458); ctx.stroke();
+  // handpiece held in the upper hand, bur tip at the mouth
+  ctx.save(); ctx.translate(fx, fy); ctx.rotate(Math.atan2(362 - fy, 780 - fx));
+  ctx.strokeStyle = C.steelDark; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(-2, 0); ctx.stroke();
+  ctx.fillStyle = '#e9eef3'; rr(8, -7, 92, 14, 7); ctx.fill();
+  ctx.strokeStyle = C.steelDark; ctx.lineWidth = 2; rr(8, -7, 92, 14, 7); ctx.stroke();
+  ctx.fillStyle = C.primary; rr(44, -7, 6, 14, 2); ctx.fill();
+  ctx.restore();
+  // mirror in the lower hand, beside the mouth
+  ctx.strokeStyle = C.steelDark; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(702, 458); ctx.lineTo(688, 430); ctx.stroke();
+  ctx.fillStyle = C.steel; circle(686, 424, 7); ctx.fill();
+  // gloves
+  ctx.fillStyle = '#a6d8ef';
+  circle(780, 362, 18); ctx.fill(); circle(702, 458, 18); ctx.fill();
+  // head with cap, mask, loupes
+  ctx.fillStyle = C.skin; circle(980, 250, 52); ctx.fill();
+  ctx.fillStyle = C.scrubsDark; ctx.beginPath(); ctx.arc(980, 250, 54, Math.PI * 1.05, Math.PI * 1.95); ctx.closePath(); ctx.fill(); // cap
+  ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.moveTo(1040, 220); ctx.lineTo(1050, 245); ctx.lineTo(1030, 255); ctx.lineTo(1040, 220); ctx.closePath(); ctx.fill();
+  // mask
+  ctx.fillStyle = '#dff0fb';
+  ctx.beginPath(); ctx.moveTo(930, 258); ctx.quadraticCurveTo(975, 300, 1020, 262); ctx.quadraticCurveTo(1026, 296, 980, 308); ctx.quadraticCurveTo(936, 298, 930, 258); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#bcd7e9'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(930, 258); ctx.quadraticCurveTo(970, 258, 1020, 262); ctx.stroke();
+  // eye and loupes
+  ctx.fillStyle = C.dark; circle(944, 240, 4); ctx.fill();
+  ctx.strokeStyle = C.steelDark; ctx.lineWidth = 2.5; circle(944, 240, 12); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(956, 240); ctx.lineTo(1030, 236); ctx.stroke();
+  ctx.restore();
+
+  ctx.restore();
+}
+
+// --- UI chrome -------------------------------------------------------------------
+var STEPS = [
+  { n: 1, title: 'Local anaesthetic', body: 'The dentist numbs the tooth and surrounding gum so the procedure is comfortable and pain-free.' },
+  { n: 2, title: 'Rubber dam isolation', body: 'A rubber dam isolates the tooth, keeping it dry and free of saliva and bacteria while the dentist works.' },
+  { n: 3, title: 'Access opening', body: 'A small opening is drilled through the crown of the tooth to reach the infected pulp chamber.' },
+  { n: 4, title: 'Cleaning & shaping', body: 'Endodontic files remove the infected pulp and shape the root canals, which are flushed with antibacterial irrigant.' },
+  { n: 5, title: 'Filling the canals', body: 'The cleaned canals are sealed from the root tip up with gutta-percha and sealer to prevent reinfection.' },
+  { n: 6, title: 'Restoring the tooth', body: 'The access opening is filled and a crown is placed to protect the tooth and restore full function.' }
+];
+
+function captionBar(step, alpha) {
+  if (alpha <= 0) return;
+  ctx.save(); ctx.globalAlpha = alpha;
+  ctx.translate(0, (1 - alpha) * 30);
+  ctx.shadowColor = 'rgba(10,22,40,0.18)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 10;
+  rr(70, 560, 1140, 118, 20); ctx.fillStyle = 'rgba(255,255,255,0.96)'; ctx.fill();
+  ctx.shadowColor = 'transparent';
+  // step pill
+  rr(96, 586, 140, 34, 17); ctx.fillStyle = C.primary; ctx.fill();
+  text('STEP ' + step.n + ' OF 6', 166, 603, 15, C.white, 800, 'center');
+  text(step.title, 256, 603, 30, C.dark, 800);
+  wrapText(step.body, 96, 648, 1090, 24, 18, C.textLight, 400);
+  // progress dots
+  for (var i = 0; i < 6; i++) {
+    circle(1110 + i * 16, 603, i < step.n ? 5 : 4);
+    ctx.fillStyle = i < step.n ? C.accent : C.border; ctx.fill();
+  }
+  ctx.restore();
+}
+
+function topBar(alpha, dark) {
+  if (alpha <= 0) return;
+  ctx.save(); ctx.globalAlpha = alpha;
+  brandMark(56, 22, 80, dark);
+  text('Root Canal Treatment  ·  Step by Step', 1220, 62, 18, dark ? 'rgba(255,255,255,0.8)' : C.textLight, 600, 'right');
+  ctx.restore();
+}
+
+function label(s, x, y, alpha, anchorX, anchorY) {
+  if (alpha <= 0) return;
+  ctx.save(); ctx.globalAlpha = alpha;
+  ctx.font = '600 16px ' + FONT;
+  var w = ctx.measureText(s).width + 28;
+  rr(x - w / 2, y - 17, w, 34, 17); ctx.fillStyle = 'rgba(10,22,40,0.85)'; ctx.fill();
+  text(s, x, y, 16, C.white, 600, 'center');
+  if (anchorX !== undefined) {
+    ctx.strokeStyle = 'rgba(10,22,40,0.6)'; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(x, y + 17); ctx.lineTo(anchorX, anchorY); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = C.accent; circle(anchorX, anchorY, 5); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// --- timeline ---------------------------------------------------------------------
+var T = {
+  titleEnd: 4.5,
+  roomStart: 4.0, roomEnd: 10.5,           // operatory scene with zoom at the end
+  s1: 10.5, s2: 15.5, s3: 20.5, s4: 27.5, s5: 34.0, s6: 39.0,
+  outro: 42.0
+};
+var TOOTH_X = 640, TOOTH_Y = 300, TOOTH_S = 1.45;
+
+function render(t) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.globalAlpha = 1;
+  ctx.clearRect(0, 0, W, H);
+
+  // ---- 1. Title card
+  if (t < T.roomStart + 1.2) {
+    darkBackground();
+    var a = seg(t, 0.2, 1.0);
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.translate(0, (1 - a) * 20);
+    brandMark(W / 2 - 150, 120, 150, true);
+    text('Root Canal Treatment', W / 2, 360, 72, C.white, 800, 'center');
+    text('Step by Step', W / 2, 430, 36, C.accent, 600, 'center');
+    ctx.restore();
+    var a2 = seg(t, 1.2, 2.0);
+    ctx.save(); ctx.globalAlpha = a2;
+    rr(W / 2 - 300, 500, 600, 2, 1); ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fill();
+    text('An illustrated guide from Toother Dental Supplies', W / 2, 545, 22, 'rgba(255,255,255,0.8)', 500, 'center');
+    text('Endodontic instruments & materials for Australian practices', W / 2, 580, 18, 'rgba(255,255,255,0.5)', 400, 'center');
+    ctx.restore();
+  }
+
+  // ---- 2. Operatory scene (crossfade in, zoom into the mouth, crossfade out)
+  if (t >= T.roomStart && t < T.s1 + 0.8) {
+    var fadeIn = seg(t, T.roomStart, T.roomStart + 1.2);
+    var zoom = seg(t, T.roomEnd - 2.6, T.roomEnd + 0.4);
+    ctx.save(); ctx.globalAlpha = fadeIn;
+    drawOperatory(t, zoom);
+    ctx.restore();
+    var la = seg(t, T.roomStart + 1.6, T.roomStart + 2.3) * (1 - seg(t, T.roomEnd - 2.8, T.roomEnd - 2.2));
+    label('Dentist', 1010, 160, la, 980, 200);
+    label('Patient', 560, 395, la, 745, 442);
+    label('Let’s look inside the tooth', W / 2, 500, seg(t, T.roomEnd - 2.4, T.roomEnd - 1.8) * (1 - seg(t, T.roomEnd - 0.2, T.roomEnd + 0.4)));
+    var vignette = ease(seg(t, T.roomEnd - 1.0, T.roomEnd + 0.6));
+    if (vignette > 0) {
+      var vg = ctx.createRadialGradient(700, 392, 40, 700, 392, 700);
+      vg.addColorStop(0, 'rgba(238,246,253,0)'); vg.addColorStop(1, 'rgba(238,246,253,1)');
+      ctx.save(); ctx.globalAlpha = vignette; ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H); ctx.restore();
+    }
+  }
+
+  // ---- 3. Procedure steps on the tooth cross-section
+  if (t >= T.roomEnd - 0.4 && t < T.outro + 1.0) {
+    var sceneA = seg(t, T.roomEnd - 0.4, T.roomEnd + 0.6);
+    ctx.save(); ctx.globalAlpha = sceneA;
+    softBackground();
+
+    var st = { infection: 1, pulp: 1, access: 0, fill: 0, restore: 0, crown: 0, dam: 0 };
+    var step = null, captionA = 0;
+
+    // Step 1: anaesthetic
+    if (t >= T.s1 && t < T.s2) { step = STEPS[0]; }
+    // Step 2: rubber dam
+    st.dam = seg(t, T.s2 + 0.6, T.s2 + 1.8);
+    if (t >= T.s2 && t < T.s3) { step = STEPS[1]; }
+    // Step 3: access opening
+    st.access = seg(t, T.s3 + 1.0, T.s3 + 4.0);
+    if (t >= T.s3 && t < T.s4) { step = STEPS[2]; }
+    // Step 4: cleaning & shaping – pulp removed progressively, infection fades
+    var clean = seg(t, T.s4 + 0.8, T.s4 + 5.0);
+    st.pulp = 1 - clean;
+    st.infection = 1 - seg(t, T.s4 + 2.5, T.s4 + 6.0);
+    if (t >= T.s4 && t < T.s5) { step = STEPS[3]; }
+    // Step 5: obturation
+    st.fill = seg(t, T.s5 + 0.8, T.s5 + 4.0);
+    if (t >= T.s5 && t < T.s6) { step = STEPS[4]; }
+    // Step 6: restoration
+    st.restore = seg(t, T.s6 + 0.5, T.s6 + 1.4);
+    st.crown = seg(t, T.s6 + 1.4, T.s6 + 2.6);
+    if (t >= T.s6 && t < T.outro) { step = STEPS[5]; }
+    // dam comes off for the crown
+    if (t >= T.s6 + 1.0) st.dam *= 1 - seg(t, T.s6 + 1.0, T.s6 + 1.6);
+
+    drawToothScene(TOOTH_X, TOOTH_Y, TOOTH_S, st, t);
+    drawRubberDam(TOOTH_X, TOOTH_Y, TOOTH_S, st.dam);
+
+    // Scene-specific instruments & labels
+    if (t >= T.s1 - 0.2 && t < T.s2) {
+      var sp = seg(t, T.s1 + 0.6, T.s1 + 2.0);
+      var out = seg(t, T.s2 - 0.9, T.s2 - 0.1);
+      if (out < 1) drawSyringe(TOOTH_X, TOOTH_Y, TOOTH_S, sp * (1 - out), t);
+      label('Infected pulp', 900, 250, seg(t, T.s1 + 0.2, T.s1 + 0.9), TOOTH_X + 10 * TOOTH_S, TOOTH_Y - 50 * TOOTH_S);
+      label('Abscess at root tip', 940, 470, seg(t, T.s1 + 0.6, T.s1 + 1.3), TOOTH_X + 34 * TOOTH_S, TOOTH_Y + 150 * TOOTH_S);
+    }
+    if (t >= T.s2 && t < T.s3) {
+      label('Rubber dam', 1000, 150, seg(t, T.s2 + 1.8, T.s2 + 2.5), 990, 200);
+      label('Clamp', 300, 420, seg(t, T.s2 + 2.2, T.s2 + 2.9), TOOTH_X - 80 * TOOTH_S, TOOTH_Y - 6 * TOOTH_S);
+    }
+    if (t >= T.s3 && t < T.s4) {
+      var hpIn = seg(t, T.s3 + 0.2, T.s3 + 1.0);
+      var hpOut = seg(t, T.s4 - 1.0, T.s4 - 0.2);
+      ctx.save(); ctx.globalAlpha = hpIn * (1 - hpOut);
+      ctx.translate(0, (1 - hpIn) * -80 + hpOut * -120);
+      drawHandpiece(TOOTH_X, TOOTH_Y, TOOTH_S, st.access, t > T.s3 + 1.0 && t < T.s3 + 4.0, t);
+      ctx.restore();
+      label('Access cavity', 300, 150, seg(t, T.s3 + 3.6, T.s3 + 4.3), TOOTH_X - 12 * TOOTH_S, TOOTH_Y - 104 * TOOTH_S);
+    }
+    if (t >= T.s4 && t < T.s5) {
+      var fIn = seg(t, T.s4 + 0.2, T.s4 + 0.9);
+      var fOut = seg(t, T.s5 - 1.2, T.s5 - 0.4);
+      // file works in and out of each canal alternately
+      var phase = (t - T.s4) * 1.3;
+      var depthL = 0.25 + 0.72 * (0.5 + 0.5 * Math.sin(phase * Math.PI * 2));
+      var depthR = 0.25 + 0.72 * (0.5 + 0.5 * Math.sin(phase * Math.PI * 2 + Math.PI));
+      ctx.save(); ctx.globalAlpha = fIn * (1 - fOut); ctx.translate(0, (1 - fIn) * -80);
+      if (t < T.s4 + 4.2) drawEndoFile(TOOTH_X, TOOTH_Y, TOOTH_S, -1, depthL * fIn, t);
+      if (t >= T.s4 + 2.1 && t < T.s4 + 4.2) drawEndoFile(TOOTH_X, TOOTH_Y, TOOTH_S, 1, depthR, t);
+      ctx.restore();
+      if (t >= T.s4 + 4.2) {
+        var irA = seg(t, T.s4 + 4.2, T.s4 + 4.8) * (1 - fOut);
+        ctx.save(); ctx.globalAlpha = irA; drawIrrigation(TOOTH_X, TOOTH_Y, TOOTH_S, t); ctx.restore();
+      }
+      label('Endodontic file', 300, 190, seg(t, T.s4 + 1.0, T.s4 + 1.7) * (1 - seg(t, T.s4 + 4.0, T.s4 + 4.5)), TOOTH_X - 10 * TOOTH_S, TOOTH_Y - 130 * TOOTH_S);
+      label('Irrigation', 300, 190, seg(t, T.s4 + 4.6, T.s4 + 5.2) * (1 - fOut), TOOTH_X - 50 * TOOTH_S, TOOTH_Y - 150 * TOOTH_S);
+      label('Canals cleaned', 960, 420, seg(t, T.s4 + 5.0, T.s4 + 5.7), TOOTH_X + 28 * TOOTH_S, TOOTH_Y + 90 * TOOTH_S);
+    }
+    if (t >= T.s5 && t < T.s6) {
+      var pIn = seg(t, T.s5 + 0.3, T.s5 + 0.9), pOut = seg(t, T.s6 - 1.0, T.s6 - 0.3);
+      ctx.save(); ctx.globalAlpha = pIn * (1 - pOut); ctx.translate(0, (1 - pIn) * -80 + pOut * -120);
+      drawPlugger(TOOTH_X, TOOTH_Y, TOOTH_S, t); ctx.restore();
+      label('Gutta-percha & sealer', 960, 440, seg(t, T.s5 + 2.4, T.s5 + 3.1), TOOTH_X + 26 * TOOTH_S, TOOTH_Y + 70 * TOOTH_S);
+    }
+    if (t >= T.s6 && t < T.outro) {
+      label('Core filling', 300, 190, seg(t, T.s6 + 0.9, T.s6 + 1.5) * (1 - seg(t, T.s6 + 2.2, T.s6 + 2.6)), TOOTH_X, TOOTH_Y - 85 * TOOTH_S);
+      label('Crown', 960, 180, seg(t, T.s6 + 2.4, T.s6 + 3.0), TOOTH_X + 60 * TOOTH_S, TOOTH_Y - 90 * TOOTH_S);
+      label('Tooth saved', W / 2, 500, seg(t, T.s6 + 2.2, T.s6 + 2.8));
+    }
+
+    // caption bar (slides in per step)
+    if (step) {
+      var stepStart = [T.s1, T.s2, T.s3, T.s4, T.s5, T.s6][step.n - 1];
+      captionA = seg(t, stepStart, stepStart + 0.5);
+      captionBar(step, captionA);
+    }
+    topBar(seg(t, T.roomEnd, T.roomEnd + 0.8), false);
+    ctx.restore();
+  }
+
+  // ---- 4. Outro
+  if (t >= T.outro) {
+    var oa = seg(t, T.outro, T.outro + 1.0);
+    ctx.save(); ctx.globalAlpha = oa;
+    darkBackground();
+    brandMark(W / 2 - 150, 110, 150, true);
+    text('Everything you need for endodontics', W / 2, 340, 48, C.white, 800, 'center');
+    text('Files, irrigants, gutta-percha, sealers and more', W / 2, 400, 24, C.accent, 500, 'center');
+    var oa2 = seg(t, T.outro + 0.8, T.outro + 1.6);
+    ctx.globalAlpha = oa * oa2;
+    rr(W / 2 - 240, 470, 480, 64, 32); ctx.fillStyle = C.primary; ctx.fill();
+    text('toother.dent@gmail.com   ·   0426 728 313', W / 2, 502, 20, C.white, 700, 'center');
+    text('TGA Registered Australian Supplier  ·  Canberra, ACT', W / 2, 580, 18, 'rgba(255,255,255,0.6)', 400, 'center');
+    ctx.restore();
+  }
+}
+
+// --- preview loop (only when opened directly in a browser) --------------------------
+if (!window.__RENDER_MODE__) {
+  var start = null;
+  function loop(ts) {
+    if (start === null) start = ts;
+    var t = ((ts - start) / 1000) % DURATION;
+    render(t);
+    requestAnimationFrame(loop);
+  }
+  logo.onload = function () { requestAnimationFrame(loop); };
+  logo.onerror = function () { requestAnimationFrame(loop); };
+}
+window.render = render; window.DURATION = DURATION;
+</script>
+</body>
+</html>
